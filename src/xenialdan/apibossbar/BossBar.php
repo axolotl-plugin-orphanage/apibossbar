@@ -17,6 +17,7 @@ use pocketmine\network\mcpe\protocol\types\BossBarColor;
 use pocketmine\network\mcpe\protocol\types\entity\EntityMetadataCollection;
 use pocketmine\player\Player;
 use pocketmine\Server;
+use pocketmine\utils\AssumptionFailedError;
 
 class BossBar
 {
@@ -24,7 +25,7 @@ class BossBar
 	private array $players = [];
 	private string $title = "";
 	private string $subTitle = "";
-	private int $color = BossBarColor::PURPLE;
+	private BossBarColor $color = BossBarColor::PURPLE;
 	public ?int $actorId = null;
 	private AttributeMap $attributeMap;
 	protected EntityMetadataCollection $propertyManager;
@@ -46,7 +47,7 @@ class BossBar
 	 *
 	 * @param Entity $entity
 	 *
-	 * @return static
+	 * @return self
 	 * @throws InvalidArgumentException
 	 */
 	public static function createForEntity(Entity $entity) : self{
@@ -173,7 +174,8 @@ class BossBar
 	 */
 	public function setPercentage(float $percentage) : static{
 		$percentage = (float) min(1.0, max(0.0, $percentage));
-		$this->getAttributeMap()->get(Attribute::HEALTH)->setValue($percentage * $this->getAttributeMap()->get(Attribute::HEALTH)->getMaxValue(), true, true);
+		$health = $this->getHealthAttribute();
+		$health->setValue($percentage * $health->getMaxValue(), true, true);
 		#$this->sendAttributesPacket($this->getPlayers());
 		$this->sendBossHealthPacket($this->getPlayers());
 
@@ -181,14 +183,15 @@ class BossBar
 	}
 
 	public function getPercentage() : float{
-		return $this->getAttributeMap()->get(Attribute::HEALTH)->getValue() / $this->getAttributeMap()->get(Attribute::HEALTH)->getMaxValue();
+		$health = $this->getHealthAttribute();
+		return $health->getValue() / $health->getMaxValue();
 	}
 
-	public function getColor() : int{
+	public function getColor() : BossBarColor{
 		return $this->color;
 	}
 
-	public function setColor(int $color) : static{
+	public function setColor(BossBarColor $color) : static{
 		$this->color = $color;
 		$this->sendBossPacket($this->getPlayers());
 
@@ -321,16 +324,23 @@ class BossBar
 	}
 
 	public function __toString(): string{
-		return __CLASS__ . " ID: $this->actorId, Players: " . count($this->players) . ", Title: \"$this->title\", Subtitle: \"$this->subTitle\", Percentage: \"" . $this->getPercentage() . "\", Color: \"" . $this->color . "\"";
+		return __CLASS__ . " ID: $this->actorId, Players: " . count($this->players) . ", Title: \"$this->title\", Subtitle: \"$this->subTitle\", Percentage: \"" . $this->getPercentage() . "\", Color: \"" . $this->color->name . "\"";
 	}
 
 	/**
 	 * @param Player|null $player Only used for DiverseBossBar
 	 * @return AttributeMap
 	 */
-	public function getAttributeMap(Player $player = null): AttributeMap
+	public function getAttributeMap(?Player $player = null): AttributeMap
 	{
 		return $this->attributeMap;
+	}
+
+	/**
+	 * @param Player|null $player Only used for DiverseBossBar
+	 */
+	protected function getHealthAttribute(?Player $player = null) : Attribute{
+		return $this->getAttributeMap($player)->get(Attribute::HEALTH) ?? throw new AssumptionFailedError("Boss bar attribute map has no health attribute");
 	}
 
 	public function setAttributeMap(AttributeMap &$attributeMap) : void{

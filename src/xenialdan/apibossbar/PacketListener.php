@@ -22,7 +22,7 @@ class PacketListener implements Listener
 
 	public static function getRegistrant(): Plugin
 	{
-		return self::$registrant;
+		return self::$registrant ?? throw new \LogicException("Boss bar packet listener is not registered");
 	}
 
 	public static function unregister(): void
@@ -37,25 +37,24 @@ class PacketListener implements Listener
 		}
 
 		self::$registrant = $plugin;
-		$plugin->getServer()->getPluginManager()->registerEvents(new self, $plugin);
+		Server::getInstance()->getPluginManager()->registerEvents(new self, $plugin);
 	}
 
-	public function onDataPacketReceiveEvent(DataPacketReceiveEvent $e)
+	public function onDataPacketReceiveEvent(DataPacketReceiveEvent $e) : void
 	{
 		if ($e->getPacket() instanceof BossEventPacket) $this->onBossEventPacket($e);
 	}
 
-	private function onBossEventPacket(DataPacketReceiveEvent $e)
+	private function onBossEventPacket(DataPacketReceiveEvent $e) : void
 	{
 		if (!($pk = $e->getPacket()) instanceof BossEventPacket) throw new InvalidArgumentException(get_class($e->getPacket()) . " is not a " . BossEventPacket::class);
-		/** @var BossEventPacket $pk */
 		switch ($pk->eventType) {
 			case BossEventPacket::TYPE_REGISTER_PLAYER:
 			case BossEventPacket::TYPE_UNREGISTER_PLAYER:
-				Server::getInstance()->getLogger()->debug("Got BossEventPacket " . ($pk->eventType === BossEventPacket::TYPE_REGISTER_PLAYER ? "" : "un") . "register by client for player id " . $pk->playerActorUniqueId);
+				Server::getInstance()->getLogger()->debug("Got BossEventPacket " . ($pk->eventType === BossEventPacket::TYPE_REGISTER_PLAYER ? "" : "un") . "register by client for player id " . $pk->bossActorUniqueId);
 				break;
 			default:
-				$e->getOrigin()->getPlayer()->kick("Invalid packet received", false);
+				$e->getOrigin()->disconnect("Invalid packet received");
 		}
 	}
 

@@ -7,7 +7,7 @@ namespace xenialdan\apibossbar;
 use pocketmine\entity\Attribute;
 use pocketmine\entity\AttributeMap;
 use pocketmine\network\mcpe\protocol\BossEventPacket;
-use pocketmine\network\mcpe\protocol\UpdateAttributesPacket;
+use pocketmine\network\mcpe\protocol\types\BossBarColor;
 use pocketmine\player\Player;
 
 /**
@@ -18,10 +18,13 @@ use pocketmine\player\Player;
  * @package xenialdan\apibossbar
  */
 class DiverseBossBar extends BossBar{
+	/** @var array<int, string> */
 	private array $titles = [];
+	/** @var array<int, string> */
 	private array $subTitles = [];
 	/** @var AttributeMap[] */
 	private array $attributeMaps = [];
+	/** @var array<int, BossBarColor> */
 	private array $colors = [];
 
 	/**
@@ -107,10 +110,11 @@ class DiverseBossBar extends BossBar{
 	 */
 	public function getFullTitleFor(Player $player) : string{
 		$text = $this->titles[$player->getId()] ?? "";
-		if(!empty($this->subTitles[$player->getId()] ?? "")){
-			$text .= "\n\n" . $this->subTitles[$player->getId()] ?? "";//?? "" even necessary?
+		$subTitle = $this->subTitles[$player->getId()] ?? "";
+		if($subTitle !== ""){
+			$text .= "\n\n" . $subTitle;
 		}
-		if(empty($text)) $text = $this->getFullTitle();
+		if($text === "") $text = $this->getFullTitle();
 		return mb_convert_encoding($text, 'UTF-8');
 	}
 
@@ -123,7 +127,8 @@ class DiverseBossBar extends BossBar{
 	public function setPercentageFor(array $players, float $percentage) : static{
 		$percentage = (float) min(1.0, max(0.00, $percentage));
 		foreach($players as $player){
-			$this->getAttributeMap($player)->get(Attribute::HEALTH)->setValue($percentage * $this->getAttributeMap($player)->get(Attribute::HEALTH)->getMaxValue(), true, true);
+			$health = $this->getHealthAttribute($player);
+			$health->setValue($percentage * $health->getMaxValue(), true, true);
 		}
 		$this->sendBossHealthPacket($players);
 
@@ -131,16 +136,17 @@ class DiverseBossBar extends BossBar{
 	}
 
 	public function getPercentageFor(Player $player) : float{
-		return $this->getAttributeMap($player)->get(Attribute::HEALTH)->getValue() / $this->getAttributeMap($player)->get(Attribute::HEALTH)->getMaxValue();
+		$health = $this->getHealthAttribute($player);
+		return $health->getValue() / $health->getMaxValue();
 	}
 
 	/**
 	 * @param Player[] $players
-	 * @param int      $color
+	 * @param BossBarColor $color
 	 *
 	 * @return static
 	 */
-	public function setColorFor(array $players, int $color) : static{
+	public function setColorFor(array $players, BossBarColor $color) : static{
 		foreach($players as $player){
 			$this->colors[$player->getId()] = $color;
 			$this->sendBossPacket([$player]);
@@ -148,7 +154,7 @@ class DiverseBossBar extends BossBar{
 		return $this;
 	}
 
-	public function getColorFor(Player $player) : int{
+	public function getColorFor(Player $player) : BossBarColor{
 		return $this->colors[$player->getId()] ?? $this->getColor();
 	}
 
@@ -188,20 +194,6 @@ class DiverseBossBar extends BossBar{
 	/**
 	 * @param Player[] $players
 	 */
-	protected function sendAttributesPacket(array $players) : void{//TODO might not be needed anymore
-		if($this->actorId === null) return;
-		$pk = new UpdateAttributesPacket();
-		$pk->actorRuntimeId = $this->actorId;
-		foreach($players as $player){
-			if(!$player->isConnected()) continue;
-			$pk->entries = $this->getAttributeMap($player)->needSend();
-			$player->getNetworkSession()->sendDataPacket($pk);
-		}
-	}
-
-	/**
-	 * @param Player[] $players
-	 */
 	public function sendBossHealthPacket(array $players) : void{
 		foreach($players as $player){
 			if(!$player->isConnected()) continue;
@@ -209,7 +201,7 @@ class DiverseBossBar extends BossBar{
 		}
 	}
 
-	public function getAttributeMap(Player $player = null) : AttributeMap{
+	public function getAttributeMap(?Player $player = null) : AttributeMap{
 		$attributeMap = $this->attributeMaps[$player?->getId()] ?? parent::getAttributeMap();
 		return $attributeMap;
 	}

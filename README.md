@@ -1,3 +1,18 @@
+## 🏠 Adopted by axolotl-plugin-orphanage
+
+This virion has been adopted by [**axolotl-plugin-orphanage**](https://github.com/axolotl-plugin-orphanage) due to prolonged inactivity from its original author. It will continue to be maintained and updated to follow [**axolotl-pm/PocketMine-MP**](https://github.com/axolotl-pm/PocketMine-MP).
+
+> [!NOTE]
+> This virion is primarily supported on **axolotl-pm**. Compatibility with other PocketMine-MP forks is not guaranteed and no support will be provided for them.
+
+## Installation
+
+Integrate the virion into your plugin, or use it as a Composer library:
+
+`composer require axolotl-plugin-orphanage/apibossbar`
+
+It replaces `inxomnyaa/apibossbar`, so existing dependants keep resolving.
+
 # apibossbar
 A simple api virion to create, send, modify and use Minecraft's boss mob indicator bars in Plugins for PocketMine-MP
 ## Advantages
